@@ -1,5 +1,8 @@
+import cats.effect.kernel.Resource
 import cats.effect.{IO, IOApp, Sync}
 import fs2.Stream
+
+import scala.io.Source
 
 object Main extends IOApp.Simple {
 
@@ -16,7 +19,18 @@ object Main extends IOApp.Simple {
       _  <- IO.println(s"The type of the second Stream is ${emitStream.getClass}")
       _  <- IO.println(s"This is a repeating Stream ${repeatedStream}")
       _  <- IO.println(evalStream)
+      _  <- isLessThanTwo
     } yield ()
+  }
 
+  def generateRandomNumber : IO[Double] = {
+    IO.pure(math.random() * 4)
+  }
+
+  def isLessThanTwo: IO[Unit] = {
+    generateRandomNumber.flatMap {
+      case value if value < 2 => Sync[IO].raiseError(new Exception(s"$value was less than two "))
+      case rest => IO.println(rest)
+    }
   }
 }
