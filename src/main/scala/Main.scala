@@ -1,8 +1,7 @@
-import cats.effect.kernel.Resource
 import cats.effect.{IO, IOApp, Sync}
 import fs2.Stream
 
-import scala.io.Source
+import scala.concurrent.duration._
 
 object Main extends IOApp.Simple {
 
@@ -20,6 +19,7 @@ object Main extends IOApp.Simple {
       _  <- IO.println(s"This is a repeating Stream ${repeatedStream}")
       _  <- IO.println(evalStream)
       _  <- isLessThanTwo
+      _  <- printTimeEverySeconds
     } yield ()
   }
 
@@ -32,5 +32,23 @@ object Main extends IOApp.Simple {
       case value if value < 2 => Sync[IO].raiseError(new Exception(s"$value was less than two "))
       case rest => IO.println(rest)
     }
+  }
+
+  def tickingClock: IO[Unit] = {
+    IO.println(
+      System.currentTimeMillis()
+    )
+  }
+
+  def printTimeEverySeconds: IO[Unit] = {
+    Sync[IO].sleep(1.seconds) >> tickingClock >> printTimeEverySeconds
+  }
+
+  def hmmClock: IO[Unit] = {
+    for {
+      _ <- Sync[IO].sleep(1.seconds)
+      _ <- IO.println(System.currentTimeMillis())
+      _ <- tickingClock
+    } yield ()
   }
 }
