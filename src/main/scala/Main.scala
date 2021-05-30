@@ -26,6 +26,7 @@ object Main extends IOApp.Simple {
         lines <- Sync[IO].delay(theLines.getLines())
        _  <- Sync[IO].delay(lines.foreach(println))
       } yield ())
+      _ <- basicResourceFailure.use[Throwable](_ => IO.raiseError(new Exception("Got you ahaha")))
     } yield ()
   }
 
@@ -70,5 +71,19 @@ object Main extends IOApp.Simple {
         Sync[IO].delay(println(s"An error occurred and this is the message ${errorMessage}"))))(cleanUp =>
       IO.println("Closing resource") *> Sync[IO].delay(cleanUp.close())
     )
+  }
+
+  def basicResourceFailure: Resource[IO, String] = {
+    Resource.make(IO.println("Acquiring the resource for basicResource failure") *> Sync[IO].delay("Hey"))(release => {
+      IO.println("Cleaning up resource for basicResourceFailure") *> Sync[IO].delay(s"I am releasing the resource with ${release}")
+    })
+  }
+
+  def backgroundTask = {
+    val loop = (IO("Looping") *> IO.sleep(1.seconds)).foreverM
+
+    Resource.make(IO.println("Going to start background task") *> loop.start){
+      IO.println("Canceling the background task") *> _.cancel
+    }
   }
 }
