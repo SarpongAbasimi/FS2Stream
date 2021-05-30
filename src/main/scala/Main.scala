@@ -1,7 +1,8 @@
-import cats.effect.{IO, IOApp, Sync}
+import cats.effect.{IO, IOApp, Resource, Sync}
 import fs2.Stream
 
 import scala.concurrent.duration._
+import scala.io.Source
 
 object Main extends IOApp.Simple {
 
@@ -18,8 +19,13 @@ object Main extends IOApp.Simple {
       _  <- IO.println(s"The type of the second Stream is ${emitStream.getClass}")
       _  <- IO.println(s"This is a repeating Stream ${repeatedStream}")
       _  <- IO.println(evalStream)
-      _  <- isLessThanTwo
-      _  <- printTimeEverySeconds
+//      _  <- isLessThanTwo
+//      _  <- printTimeEverySeconds
+      _  <- learningHowToUserResource.use(whatIsThis => IO.println(whatIsThis))
+      _    <- useResourceToReadFileContent("./src/main/resources/names.txt").use(theLines => for {
+        lines <- Sync[IO].delay(theLines.getLines())
+       _  <- Sync[IO].delay(lines.foreach(println))
+      } yield ())
     } yield ()
   }
 
@@ -50,5 +56,19 @@ object Main extends IOApp.Simple {
       _ <- IO.println(System.currentTimeMillis())
       _ <- tickingClock
     } yield ()
+  }
+
+  def learningHowToUserResource: Resource[IO, String] = {
+    Resource.make[IO, String](IO.println("This is the acquiring stage") *> IO("String"))(released => {
+      IO.println(s"This is what was released ${released}")
+    })
+  }
+
+  def useResourceToReadFileContent(path: String) = {
+    Resource.make(IO.println(s"Acquiring resource from ${path}") *> IO.blocking(Source.fromFile(path)).
+      onError(errorMessage =>
+        Sync[IO].delay(println(s"An error occurred and this is the message ${errorMessage}"))))(cleanUp =>
+      IO.println("Closing resource") *> Sync[IO].delay(cleanUp.close())
+    )
   }
 }
